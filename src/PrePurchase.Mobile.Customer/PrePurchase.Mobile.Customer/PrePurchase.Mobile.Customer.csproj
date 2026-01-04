@@ -81,4 +81,8 @@
 		<PackageReference Include="ZXing.Net.Maui.Controls" Version="0.4.0" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\..\PrePurchase.Mobile.Shared\PrePurchase.Mobile.Shared.csproj" />
+	</ItemGroup>
+
 </Project>
