@@ -1,0 +1,648 @@
+﻿@page "/profile"
+@using PrePurchase.Mobile.Shared.Services.Authentication
+@using PrePurchase.Mobile.Shared.Services.User
+@using PrePurchase.Mobile.Shared.Models.User
+@inject IAuthenticationService AuthService
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Profile - PrePurchase</PageTitle>
+
+<style>
+    .profile-page {
+        background: var(--gray-100);
+        min-height: 100%;
+        padding-bottom: 20px;
+    }
+
+    .profile-header {
+        background: linear-gradient(135deg, var(--deep-blue) 0%, var(--primary-blue) 100%);
+        padding: 24px 20px 32px;
+        color: white;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-name {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .profile-email {
+        font-size: 14px;
+        opacity: 0.85;
+    }
+
+    .profile-role-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .profile-section {
+        background: white;
+        margin: 0 20px 16px;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+    }
+
+    .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: center;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-icon {
+        font-size: 24px;
+        width: 40px;
+        text-align: center;
+    }
+
+    .info-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-label {
+        font-size: 12px;
+        color: var(--gray-600);
+        margin-bottom: 4px;
+    }
+
+    .info-value {
+        font-size: 15px;
+        color: var(--dark);
+        font-weight: 600;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+    }
+
+    .badge-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        padding: 16px 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .menu-item:last-child {
+        border-bottom: none;
+    }
+
+    .menu-item:active {
+        background: var(--gray-100);
+        margin: 0 -20px;
+        padding: 16px 20px;
+    }
+
+    .menu-icon {
+        font-size: 24px;
+        width: 40px;
+        text-align: center;
+    }
+
+    .menu-content {
+        flex: 1;
+    }
+
+    .menu-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .menu-subtitle {
+        font-size: 12px;
+        color: var(--gray-600);
+        margin-top: 2px;
+    }
+
+    .menu-arrow {
+        font-size: 16px;
+        color: var(--gray-600);
+    }
+
+    .edit-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-top: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .form-input {
+        padding: 12px 16px;
+        border: 2px solid var(--gray-200);
+        border-radius: 12px;
+        font-size: 15px;
+        transition: border-color 0.3s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary-blue);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+    .btn {
+        padding: 14px 20px;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-blue), var(--deep-blue));
+        color: white;
+    }
+
+    .btn-primary:active {
+        transform: translateY(1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-secondary {
+        background: var(--gray-200);
+        color: var(--gray-600);
+    }
+
+    .btn-secondary:active {
+        background: var(--gray-300);
+    }
+
+    .btn-danger {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-danger:active {
+        background: #dc2626;
+        transform: translateY(1px);
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 400px;
+    }
+
+    .error-container {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .error-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+    }
+
+    .error-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 8px;
+    }
+
+    .error-message {
+        font-size: 14px;
+        color: var(--gray-600);
+        margin-bottom: 24px;
+    }
+</style>
+
+<div class="profile-page">
+    @if (_isLoading)
+    {
+        <div class="loading-container">
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
+        </div>
+    }
+    else if (_profile != null)
+    {
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                @if (!string.IsNullOrEmpty(_profile.ProfileImageUrl))
+                {
+                    <img src="@_profile.ProfileImageUrl" alt="Profile" />
+                }
+                else
+                {
+                    <span>👤</span>
+                }
+            </div>
+            <div class="profile-name">@_profile.FirstName @_profile.LastName</div>
+            <div class="profile-email">@_profile.Email</div>
+            <div class="profile-role-badge">@_profile.Role</div>
+        </div>
+
+        <!-- Personal Information Section -->
+        <div class="profile-section">
+            <div class="section-title">
+                <span>👤</span>
+                Personal Information
+            </div>
+
+            @if (_isEditing)
+            {
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input type="text" @bind="_editFirstName" class="form-input" placeholder="First Name" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" @bind="_editLastName" class="form-input" placeholder="Last Name" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" @bind="_editPhoneNumber" class="form-input" placeholder="Phone Number" />
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" @onclick="SaveProfile" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>💾 Save</span>
+                            }
+                        </button>
+                        <button class="btn btn-secondary" @onclick="CancelEdit" disabled="@_isSaving">
+                            ❌ Cancel
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="info-row" @onclick="StartEdit" style="cursor: pointer;">
+                    <div class="info-icon">📧</div>
+                    <div class="info-content">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">@_profile.Email</div>
+                    </div>
+                </div>
+
+                <div class="info-row" @onclick="StartEdit" style="cursor: pointer;">
+                    <div class="info-icon">📱</div>
+                    <div class="info-content">
+                        <div class="info-label">Phone Number</div>
+                        <div class="info-value">@(_profile.PhoneNumber ?? "Not provided")</div>
+                    </div>
+                </div>
+
+                <div class="info-row" @onclick="StartEdit" style="cursor: pointer;">
+                    <div class="info-icon">📅</div>
+                    <div class="info-content">
+                        <div class="info-label">Member Since</div>
+                        <div class="info-value">@_profile.CreatedAt.ToString("MMMM dd, yyyy")</div>
+                    </div>
+                </div>
+
+                <div class="info-row" @onclick="StartEdit" style="cursor: pointer;">
+                    <div class="info-icon">⏰</div>
+                    <div class="info-content">
+                        <div class="info-label">Last Login</div>
+                        <div class="info-value">@(_profile.LastLoginAt?.ToString("MMM dd, yyyy HH:mm") ?? "Never")</div>
+                    </div>
+                    <div class="menu-arrow">✏️</div>
+                </div>
+            }
+        </div>
+
+        <!-- Account Status Section -->
+        <div class="profile-section">
+            <div class="section-title">
+                <span>✅</span>
+                Account Status
+            </div>
+
+            <div class="info-row">
+                <div class="info-icon">📧</div>
+                <div class="info-content">
+                    <div class="info-label">Email Verification</div>
+                </div>
+                @if (_profile.IsEmailVerified)
+                {
+                    <span class="status-badge badge-success">✅ Verified</span>
+                }
+                else
+                {
+                    <span class="status-badge badge-warning">⚠️ Not Verified</span>
+                }
+            </div>
+
+            <div class="info-row">
+                <div class="info-icon">📱</div>
+                <div class="info-content">
+                    <div class="info-label">Phone Verification</div>
+                </div>
+                @if (_profile.IsPhoneVerified)
+                {
+                    <span class="status-badge badge-success">✅ Verified</span>
+                }
+                else
+                {
+                    <span class="status-badge badge-warning">⚠️ Not Verified</span>
+                }
+            </div>
+
+            <div class="info-row">
+                <div class="info-icon">🔓</div>
+                <div class="info-content">
+                    <div class="info-label">Account Status</div>
+                </div>
+                @if (_profile.IsActive)
+                {
+                    <span class="status-badge badge-success">✅ Active</span>
+                }
+                else
+                {
+                    <span class="status-badge badge-warning">⚠️ Inactive</span>
+                }
+            </div>
+        </div>
+
+        <!-- Settings & Actions Section -->
+        <div class="profile-section">
+            <div class="section-title">
+                <span>⚙️</span>
+                Settings & Actions
+            </div>
+
+            <div class="menu-item" @onclick='() => Navigation.NavigateTo("/change-password")'>
+                <div class="menu-icon">🔒</div>
+                <div class="menu-content">
+                    <div class="menu-title">Change Password</div>
+                    <div class="menu-subtitle">Update your password</div>
+                </div>
+                <div class="menu-arrow">→</div>
+            </div>
+
+            <div class="menu-item" @onclick='() => Navigation.NavigateTo("/wallet/history")'>
+                <div class="menu-icon">💳</div>
+                <div class="menu-content">
+                    <div class="menu-title">Wallet History</div>
+                    <div class="menu-subtitle">View transactions</div>
+                </div>
+                <div class="menu-arrow">→</div>
+            </div>
+
+            <div class="menu-item" @onclick='() => Navigation.NavigateTo("/orders")'>
+                <div class="menu-icon">📦</div>
+                <div class="menu-content">
+                    <div class="menu-title">My Orders</div>
+                    <div class="menu-subtitle">Track your purchases</div>
+                </div>
+                <div class="menu-arrow">→</div>
+            </div>
+
+            <div class="menu-item" @onclick='() => Navigation.NavigateTo("/collectors")'>
+                <div class="menu-icon">👥</div>
+                <div class="menu-content">
+                    <div class="menu-title">Authorized Collectors</div>
+                    <div class="menu-subtitle">Manage who can collect</div>
+                </div>
+                <div class="menu-arrow">→</div>
+            </div>
+
+            <div class="menu-item" @onclick="Logout">
+                <div class="menu-icon">🚪</div>
+                <div class="menu-content">
+                    <div class="menu-title">Logout</div>
+                    <div class="menu-subtitle">Sign out of your account</div>
+                </div>
+                <div class="menu-arrow">→</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title">Failed to Load Profile</div>
+            <div class="error-message">@_errorMessage</div>
+            <button class="btn btn-primary" @onclick="LoadProfile">
+                🔄 Try Again
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private UserProfileDto? _profile;
+    private bool _isLoading = true;
+    private bool _isEditing = false;
+    private bool _isSaving = false;
+    private string? _errorMessage;
+
+    private string? _editFirstName;
+    private string? _editLastName;
+    private string? _editPhoneNumber;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.GetProfileAsync();
+
+            if (result.IsSuccess && result.Data != null)
+            {
+                _profile = result.Data;
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Failed to load profile";
+                Snackbar.Add(_errorMessage, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartEdit()
+    {
+        if (_profile == null) return;
+
+        _editFirstName = _profile.FirstName;
+        _editLastName = _profile.LastName;
+        _editPhoneNumber = _profile.PhoneNumber;
+        _isEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+    }
+
+    private async Task SaveProfile()
+    {
+        if (_profile == null) return;
+
+        _isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.UpdateProfileAsync(
+                _profile.Id,
+                _editFirstName,
+                _editLastName,
+                _editPhoneNumber
+            );
+
+            if (result.IsSuccess && result.Data != null)
+            {
+                _profile = result.Data;
+                _isEditing = false;
+                Snackbar.Add("Profile updated successfully! 🎉", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(result.ErrorMessage ?? "Failed to update profile", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Logout()
+    {
+        try
+        {
+            await AuthService.LogoutAsync();
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Logout error: {ex.Message}", Severity.Error);
+        }
+    }
+}

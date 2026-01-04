@@ -1,0 +1,379 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@using PrePurchase.Mobile.Shared.Models.User
+@using PrePurchase.Mobile.Shared.Services.Storage
+@using PrePurchase.Mobile.Shared.Theme
+@using Microsoft.AspNetCore.Components.Authorization
+@using PrePurchase.Mobile.Shared.Services.Cart
+@using System.Security.Claims
+@using System.Text.Json
+@inject ICartStateService CartState
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<MudThemeProvider Theme="@PrePurchaseTheme.Theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .app-container {
+        height: calc(100vh - 72px - 80px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 20px;
+    }
+
+    .app-container-full {
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .top-bar {
+        background: linear-gradient(135deg, #2B7CB3 0%, #4A9FD8 100%);
+        padding: 16px 20px;
+        height: 72px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(42, 113, 163, 0.15);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+    }
+
+    .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .logo {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: 800;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .brand-name {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+
+    .notification-btn {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        position: relative;
+        backdrop-filter: blur(10px);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+        .notification-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+    .notification-dot {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 8px;
+        height: 8px;
+        background: #EF4444;
+        border-radius: 50%;
+        border: 2px solid #2B7CB3;
+    }
+
+    .content-wrapper {
+        margin-top: 72px;
+    }
+
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 80px;
+        background: white;
+        border-top: 1px solid #E5EAF1;
+        padding: 12px 20px 20px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+        z-index: 1000;
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 8px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: #5A6C7D;
+        position: relative;
+        border: none;
+        background: transparent;
+    }
+
+        .nav-item.active {
+            color: #4A9FD8;
+            background: #E8F4FA;
+        }
+
+        .nav-item:hover:not(.active) {
+            background: #F7F9FC;
+        }
+
+    .nav-icon {
+        font-size: 24px;
+    }
+
+    .nav-label {
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .cart-badge, .notification-badge {
+        position: absolute;
+        top: 4px;
+        right: 18px;
+        background: #EF4444;
+        color: white;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-size: 10px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .app-container > * {
+        min-height: auto;
+    }
+</style>
+
+@if (_isAuthPage)
+{
+    <div class="app-container-full">
+        @Body
+    </div>
+}
+else
+{
+    <AuthorizeView>
+        <Authorized>
+            <div class="top-bar">
+                <div class="logo-section">
+                    <MudImage Src="images/logo.png"
+                              Height="44"
+                              Width="44"
+                              Alt="PrePurchase Logo"
+                              Style="border-radius: 8px;" />
+                    <div class="brand-name">PrePurchase</div>
+                </div>
+                <button class="notification-btn" @onclick="OpenNotifications">
+                    🔔
+                    @if (_hasUnreadNotifications)
+                    {
+                        <span class="notification-dot"></span>
+                    }
+                </button>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="app-container">
+                    @Body
+                </div>
+            </div>
+
+            <nav class="bottom-nav">
+                @if (_isShopOwner)
+                {
+                    <!-- Shop Owner Navigation -->
+                    <button class="nav-item @(IsActive("/") ? "active" : "")" @onclick='() => Navigate("/")'>
+                        <div class="nav-icon">📊</div>
+                        <div class="nav-label">Dashboard</div>
+                    </button>
+                    <button class="nav-item @(IsActive("/orders") ? "active" : "")" @onclick='() => Navigate("/orders")'>
+                        <div class="nav-icon">📦</div>
+                        <div class="nav-label">Orders</div>
+                        @if (_pendingOrdersCount > 0)
+                        {
+                            <span class="notification-badge">@_pendingOrdersCount</span>
+                        }
+                    </button>
+                    <button class="nav-item @(IsActive("/products") ? "active" : "")" @onclick='() => Navigate("/products")'>
+                        <div class="nav-icon">🏪</div>
+                        <div class="nav-label">Products</div>
+                    </button>
+                    <button class="nav-item @(IsActive("/profile") ? "active" : "")" @onclick='() => Navigate("/profile")'>
+                        <div class="nav-icon">⚙️</div>
+                        <div class="nav-label">Settings</div>
+                    </button>
+                }
+                else
+                {
+                    <!-- Customer Navigation -->
+                    <button class="nav-item @(IsActive("/") ? "active" : "")" @onclick='() => Navigate("/")'>
+                        <div class="nav-icon">🏠</div>
+                        <div class="nav-label">Home</div>
+                    </button>
+                    <button class="nav-item @(IsActive("/shops") ? "active" : "")" @onclick='() => Navigate("/shops")'>
+                        <div class="nav-icon">🔍</div>
+                        <div class="nav-label">Discover</div>
+                    </button>
+                    <button class="nav-item @(IsActive("/cart") ? "active" : "")" @onclick='() => Navigate("/cart")'>
+                        <div class="nav-icon">🛒</div>
+                        <div class="nav-label">Cart</div>
+                        @if (CartState.CartItemCount > 0)
+                        {
+                            <span class="cart-badge">@CartState.CartItemCount</span>
+                        }
+                    </button>
+                    <button class="nav-item @(IsActive("/profile") ? "active" : "")" @onclick='() => Navigate("/profile")'>
+                        <div class="nav-icon">👤</div>
+                        <div class="nav-label">Profile</div>
+                    </button>
+                }
+            </nav>
+        </Authorized>
+        <NotAuthorized>
+            <div class="app-container-full">
+                @Body
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+}
+
+@code {
+    private bool _hasUnreadNotifications = true;
+    private bool _isAuthPage = false;
+    private bool _isShopOwner = false;
+    private int _pendingOrdersCount = 0;
+    [Inject]
+    public ITokenStorage TokenStorage { get; set; } = default!;
+
+    private readonly string[] _authPages = new[]
+    {
+        "/auth/login",
+        "/auth/register",
+        "/login",
+        "/register"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        CheckIfAuthPage();
+        await DetermineUserRole();
+        NavigationManager.LocationChanged += OnLocationChanged;
+        CartState.OnCartUpdated += OnCartUpdated;
+
+        await CartState.RefreshCartCountAsync();
+    }
+
+    private async Task DetermineUserRole()
+    {
+        try
+        {
+            // Get stored user data (saved during LoginAsync)
+            var userJson = await TokenStorage.GetUserDataAsync();
+            if (string.IsNullOrWhiteSpace(userJson))
+            {
+                _isShopOwner = false;
+                return;
+            }
+
+            var user = JsonSerializer.Deserialize<UserProfileDto>(userJson);
+            if (user == null)
+            {
+                _isShopOwner = false;
+                return;
+            }
+
+            _isShopOwner = string.Equals(
+                user.Role,
+                "ShopOwner",
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error determining user role: {ex.Message}");
+            _isShopOwner = false;
+        }
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        CheckIfAuthPage();
+        StateHasChanged();
+    }
+
+    private void OnCartUpdated()
+    {
+        StateHasChanged();
+    }
+
+    private void CheckIfAuthPage()
+    {
+        var currentPath = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        _isAuthPage = _authPages.Any(page => currentPath.StartsWith(page, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool IsActive(string path)
+    {
+        var currentPath = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        return currentPath == path || (path != "/" && currentPath.StartsWith(path));
+    }
+
+    private void Navigate(string path)
+    {
+        NavigationManager.NavigateTo(path);
+    }
+
+    private void OpenNotifications()
+    {
+        NavigationManager.NavigateTo("/notifications");
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+        CartState.OnCartUpdated -= OnCartUpdated;
+    }
+}

@@ -1,0 +1,201 @@
+@page "/register"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using static PrePurchase.Mobile.Shared.Constants.ApiConstants
+@attribute [AllowAnonymous]
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<AuthorizeView>
+    <NotAuthorized>
+        <MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+            <MudPaper Elevation="3" Class="pa-8">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <MudImage Src="images/logo.png"
+                              Height="100"
+                              Width="100"
+                              Class="mb-4"
+                              Alt="PrePurchase Logo" />
+                    <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">
+                        PrePurchase
+                    </MudText>
+                    <MudText Typo="Typo.h6" Align="Align.Center" GutterBottom="true">
+                        Create your account
+                    </MudText>
+                </div>
+
+                <MudForm @ref="_form" Class="mt-6">
+                    <MudTextField @bind-Value="_firstName"
+                                  Label="Full Name"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Full name is required" />
+
+                    <MudTextField @bind-Value="_lastName"
+                                  Label="Full Name"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Full name is required" />
+
+                    <MudTextField @bind-Value="_email"
+                                  Label="Email"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Email"
+                                  Required="true"
+                                  RequiredError="Email is required"
+                                  Class="mt-4" />
+
+                    <MudTextField @bind-Value="_phoneNumber"
+                                  Label="Phone Number"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Telephone"
+                                  Required="true"
+                                  RequiredError="Phone number is required"
+                                  Placeholder="0123456789"
+                                  Class="mt-4" />
+                     <MudSelect T="UserRole" Label="Role" @bind-Value="_role" Required="true" RequiredError="Role is required" Class="mt-4">
+                        @foreach (UserRole role in Enum.GetValues(typeof(UserRole)))
+                        {
+                            <MudSelectItem T="UserRole" Value="role">@role.ToString()</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudTextField @bind-Value="_password"
+                                  Label="Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Password"
+                                  Required="true"
+                                  RequiredError="Password is required"
+                                  HelperText="Min 8 characters"
+                                  Class="mt-4" />
+
+                    <MudTextField @bind-Value="_confirmPassword"
+                                  Label="Confirm Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Password"
+                                  Required="true"
+                                  RequiredError="Confirm password is required"
+                                  Class="mt-4" />
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Class="mt-4">
+                            @_errorMessage
+                        </MudAlert>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <MudAlert Severity="Severity.Success" Class="mt-4">
+                            @_successMessage
+                        </MudAlert>
+                    }
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Class="mt-6"
+                               OnClick="HandleRegister"
+                               Disabled="_isLoading">
+                        @if (_isLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ml-2">Creating account...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Register</MudText>
+                        }
+                    </MudButton>
+                </MudForm>
+
+                <MudDivider Class="my-4" />
+
+                <MudText Align="Align.Center">
+                    Already have an account?
+                    <MudLink Href="/login" Color="Color.Primary">Login</MudLink>
+                </MudText>
+            </MudPaper>
+        </MudContainer>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private MudForm _form = null!;
+    private string _firstName = string.Empty;
+    private string _lastName = string.Empty;
+    private UserRole _role = UserRole.Resident;
+    private string _email = string.Empty;
+    private string _phoneNumber = string.Empty;
+    private string _password = string.Empty;
+    private string _confirmPassword = string.Empty;
+    private string _errorMessage = string.Empty;
+    private string _successMessage = string.Empty;
+    private bool _isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+        _successMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_firstName))
+        {
+            _errorMessage = "First name is required";
+            _isLoading = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_lastName))
+        {
+            _errorMessage = "Last name is required";
+            _isLoading = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_email) || !_email.Contains("@"))
+        {
+            _errorMessage = "Valid email is required";
+            _isLoading = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_phoneNumber) || _phoneNumber.Length < 10)
+        {
+            _errorMessage = "Valid phone number is required (min 10 digits)";
+            _isLoading = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_password) || _password.Length < 8)
+        {
+            _errorMessage = "Password must be at least 8 characters";
+            _isLoading = false;
+            return;
+        }
+
+        if (_password != _confirmPassword)
+        {
+            _errorMessage = "Passwords do not match";
+            _isLoading = false;
+            return;
+        }
+
+        var result = await AuthService.RegisterAsync(_firstName,_lastName,
+            _email, _password, _phoneNumber,Shared.Constants.ApiConstants.UserRole.Resident);
+
+        _isLoading = false;
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Account created successfully! Redirecting...";
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage ?? "Registration failed. Please try again.";
+        }
+    }
+}
